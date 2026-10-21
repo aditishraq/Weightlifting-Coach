@@ -1,0 +1,31 @@
+# macOS / editors
+.DS_Store
+.vscode/
+.idea/
+*.swp
+
+# logs, Node
+*.log
+node_modules/
+
+# Python engine (engine/.gitignore says the same): virtualenv, ~1.4 GB of downloaded models, bytecode
+engine/.venv/
+engine/models/
+__pycache__/
+*.pyc
+
+# Your own lift videos and everything measured from them (body landmarks included) stay on this machine
+samples/*.mov
+samples/*.MOV
+samples/*.m4v
+samples/IMG_*
+
+# Generated test clips: rebuild with `node tests/make_synthetic.js`. Their *.truth.json and engine results are kept.
+samples/*.mp4
+
+# Exports from the app (backups, datasets, saved videos and images)
+weightlifting-coach-*.json
+bar-path-library-*.json
+*-bar-path.png
+*-bar-path.mp4
+*-bar-path.webm

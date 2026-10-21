@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Weightlifting Coach</title>
+<meta name="description" content="Track the barbell through a snatch or clean & jerk, see its path against vertical, and check the lift for common technique faults. Runs in your browser; videos never leave your device.">
+<link rel="icon" href="icons/logo.png" type="image/png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#101214">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="WL Coach">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="css/app.css">
+<script type="module" src="js/app.js"></script>
+</head>
+<body>
+
+<div class="app">
+  <header class="top">
+    <h1 class="brand"><img class="logo" src="icons/logo.png" alt="" aria-hidden="true">Weightlifting Coach</h1>
+    <p>Film a snatch, clean or jerk from the side. The app tracks the bar and your body, checks your technique against measured elite lifts, explains what to work on, and keeps a record of your progress. The video never leaves your device.</p>
+    <div class="top-actions">
+      <span class="pill na" id="offline" hidden>Offline</span>
+      <button class="btn sm" id="btnInstall" hidden>Install app</button>
+    </div>
+    <p class="note install-help" id="installHelp" hidden>In Safari, tap the Share button, then <b>Add to Home Screen</b>. Installed, the app opens without an internet connection and Safari keeps your saved lifts.</p>
+  </header>
+
+  <main class="work">
+    <section class="stage" aria-label="Video">
+      <div class="screen" id="screen">
+        <canvas id="view" width="720" height="960" aria-label="Video frame with bar path overlay"></canvas>
+        <div class="chip" id="chip">Loading sample</div>
+        <div class="drop" id="drop" hidden>Drop video to load</div>
+        <div class="stage-acts">
+          <label class="btn primary file" for="file" id="stageLoad">Choose video</label>
+          <button class="btn primary" id="stageTrack" hidden>Track</button>
+          <button class="btn stop" id="stageStop" hidden>Stop</button>
+        </div>
+      </div>
+      <div class="transport">
+        <button class="btn" id="btnPlay" style="min-width:72px">Play</button>
+        <button class="btn icon" id="btnPrev" aria-label="Previous frame">&lsaquo;</button>
+        <button class="btn icon" id="btnNext" aria-label="Next frame">&rsaquo;</button>
+        <input type="range" id="scrub" min="0" max="0" value="0" aria-label="Frame">
+        <span class="counter" id="counter">f 0/0</span>
+        <select class="btn" id="speed" aria-label="Playback speed">
+          <option value="1">1×</option>
+          <option value="0.5">½×</option>
+          <option value="0.25" selected>¼×</option>
+        </select>
+      </div>
+      <p class="hint" id="hint"></p>
+    </section>
+
+    <aside class="rail" aria-label="Controls">
+      <div class="tabs" role="tablist" aria-label="Analysis">
+        <button role="tab" id="tabPath" aria-selected="true" aria-controls="panelPath">Bar path</button>
+        <button role="tab" id="tabTech" aria-selected="false" aria-controls="panelTech">Technique<span class="count" id="techCount"></span></button>
+        <button role="tab" id="tabLib" aria-selected="false" aria-controls="panelLib">Library<span class="count muted" id="libCount"></span></button>
+        <button role="tab" id="tabCoach" aria-selected="false" aria-controls="panelCoach">Coach</button>
+      </div>
+
+      <div id="panelPath" role="tabpanel" aria-labelledby="tabPath">
+        <section>
+          <h2><span class="n">1</span>Load a lift</h2>
+          <label class="btn primary file" for="file">Choose video<input type="file" id="file" accept="video/*"></label>
+          <div class="row">
+            <span class="lbl">Lift</span>
+            <div class="seg" role="group" aria-label="Lift" id="liftSeg">
+              <button data-lift="snatch" aria-pressed="true">Snatch</button>
+              <button data-lift="clean" aria-pressed="false">Clean</button>
+              <button data-lift="cj" aria-pressed="false">Clean &amp; jerk</button>
+            </div>
+          </div>
+          <div class="row">
+            <label for="fps">Frame rate</label>
+            <select class="btn" id="fps" style="flex:1">
+              <option value="24">24 fps</option><option value="25">25 fps</option>
+              <option value="30" selected>30 fps</option><option value="50">50 fps</option>
+              <option value="60">60 fps</option><option value="120">120 fps</option><option value="240">240 fps</option>
+            </select>
+          </div>
+          <p class="note" id="fpsNote">Film from the side with the camera still and level with the bar. You can also drop a file on the video.</p>
+        </section>
+
+        <section>
+          <h2><span class="n">2</span>Mark the bar end</h2>
+          <p class="note">Play or step to the frame where the lift starts and pause. Press <b>Find the plate</b>, or click the centre of the sleeve on that frame and drag out to the plate rim to size the circle.</p>
+          <div class="btns">
+            <button class="btn" id="btnFind" disabled>Find the plate</button>
+          </div>
+          <div class="suggest" id="suggest" hidden>
+            <p class="note" id="suggestMsg"></p>
+            <div class="btns">
+              <button class="btn primary" id="btnUse">Use this</button>
+              <button class="btn" id="btnAdjust">Adjust</button>
+              <button class="btn" id="btnNextGuess">Try another</button>
+            </div>
+          </div>
+          <p class="note" id="findMsg"></p>
+          <div class="row">
+            <label for="radius">Plate radius</label>
+            <input type="range" id="radius" min="8" max="300" value="40">
+            <output id="radiusOut" for="radius">40 px</output>
+          </div>
+          <label class="check"><input type="checkbox" id="scaleOn" checked><span>Plate is a 450 mm bumper (report distances in cm)</span></label>
+        </section>
+
+        <section>
+          <h2><span class="n">3</span>Track</h2>
+          <div class="btns">
+            <button class="btn primary" id="btnTrack" disabled>Track</button>
+            <button class="btn" id="btnStop" hidden>Stop</button>
+            <button class="btn" id="btnClear" disabled>Clear path</button>
+          </div>
+          <div class="btns" id="engineRow" hidden>
+            <button class="btn" id="btnEngine">High-quality analysis (local engine)</button>
+          </div>
+          <p class="note" id="engineMsg" hidden></p>
+          <p class="note" id="trackHint"></p>
+          <div class="progress" aria-hidden="true"><div id="bar"></div></div>
+          <p class="note" id="trackMsg">Tracking runs frame by frame in your browser.</p>
+        </section>
+
+        <section>
+          <h2>Readout</h2>
+          <div class="row">
+            <span class="lbl">Lifter faces</span>
+            <div class="seg" role="group" aria-label="Lifter faces">
+              <button id="faceL" aria-pressed="false">← Left</button>
+              <button id="faceR" aria-pressed="true">Right →</button>
+            </div>
+          </div>
+          <div class="row">
+            <label class="lbl" for="barKg">Bar weight</label>
+            <input type="number" id="barKg" class="input" min="0" step="0.5" inputmode="decimal" placeholder="kg, for power" style="flex:1">
+          </div>
+          <dl class="stats" id="stats"></dl>
+          <p class="note" id="statsNote"></p>
+          <div id="refBox"></div>
+        </section>
+
+        <section>
+          <h2>Display</h2>
+          <div class="row">
+            <span class="lbl">Line colour</span>
+            <div class="swatches" id="swatches"></div>
+          </div>
+          <div class="row">
+            <label for="lw">Line width</label>
+            <input type="range" id="lw" min="2" max="20" value="7">
+            <output id="lwOut" for="lw">7 px</output>
+          </div>
+          <label class="check"><input type="checkbox" id="plumb" checked><span>Vertical line through the start position</span></label>
+          <label class="check"><input type="checkbox" id="descent" checked><span>Draw the drop into the catch in white</span></label>
+          <label class="check"><input type="checkbox" id="grow" checked><span>Path grows with playback</span></label>
+          <label class="check"><input type="checkbox" id="smooth" checked><span>Smooth the path</span></label>
+          <div class="btns">
+            <button class="btn" id="btnPng">Save frame (PNG)</button>
+            <button class="btn" id="btnRec">Save video</button>
+          </div>
+          <p class="note" id="exportNote"></p>
+        </section>
+      </div>
+
+      <div id="panelTech" role="tabpanel" aria-labelledby="tabTech" hidden>
+        <section>
+          <h2><span class="n">4</span>Check technique</h2>
+          <p class="note">Finds the lifter's joints on every tracked frame, then checks the pull, the catch and the jerk for common faults. The body-tracking model loads the first time (about 21 MB) and works offline after that.</p>
+          <div class="btns">
+            <button class="btn primary" id="btnPose" disabled>Analyse technique</button>
+            <button class="btn" id="btnPoseStop" hidden>Stop</button>
+          </div>
+          <div class="progress" aria-hidden="true"><div id="poseBar"></div></div>
+          <p class="note" id="poseMsg">Track the bar on the Bar path tab first.</p>
+          <label class="check"><input type="checkbox" id="showBody" checked><span>Show body lines on the video</span></label>
+        </section>
+        <section>
+          <h2>Findings</h2>
+          <div id="findings"><p class="note">Nothing to check yet.</p></div>
+        </section>
+        <section>
+          <h2>How to read these</h2>
+          <p class="note">Click a finding to jump to its frame and see the measurement drawn on the lifter. The checks use one side-on camera and a general body model, so joint angles can be off by several degrees, more when a plate hides a joint. Treat a flag as a reason to look at that frame, not as a verdict.</p>
+        </section>
+      </div>
+
+      <div id="panelLib" role="tabpanel" aria-labelledby="tabLib" hidden>
+        <section id="saveSec" hidden>
+          <h2><span class="n">5</span>Save this lift</h2>
+          <div class="row">
+            <label for="saveDate">Date</label>
+            <input type="date" id="saveDate" class="input" style="flex:1">
+          </div>
+          <div class="row">
+            <label for="saveKg">Weight</label>
+            <input type="number" id="saveKg" class="input" min="0" step="0.5" inputmode="decimal" placeholder="kg" style="flex:1">
+          </div>
+          <textarea id="saveNotes" class="input" rows="2" placeholder="Notes: cues, how it felt, what you were working on" aria-label="Notes"></textarea>
+          <label class="check"><input type="checkbox" id="keepVideo"><span id="keepVideoLbl">Keep the video on this device</span></label>
+          <div class="btns">
+            <button class="btn primary" id="btnSave">Save to library</button>
+            <button class="btn" id="btnSaveNew" hidden>Save as new</button>
+          </div>
+          <p class="note" id="saveHint"></p>
+          <p class="note" id="saveMsg" role="status"></p>
+        </section>
+
+        <section id="detailSec" hidden>
+          <h2 id="detTitle"></h2>
+          <p class="note" id="detSub"></p>
+          <div class="stills" id="detStills"></div>
+          <dl class="stats" id="detStats"></dl>
+          <div id="detFindings"></div>
+          <div class="labels" id="labelBox">
+            <h3>Your labels</h3>
+            <p class="note">For your own records and a future fault model: say what actually happened, whatever the app found.</p>
+            <div class="row"><span class="lbl">Outcome</span>
+              <div class="seg" role="group" aria-label="Outcome" id="lblOutcome"><button data-v="make" aria-pressed="false">Make</button><button data-v="miss" aria-pressed="false">Miss</button></div></div>
+            <div class="row"><label for="lblRating">Overall</label>
+              <select id="lblRating" class="btn"><option value="">–</option><option value="1">1 · poor</option><option value="2">2</option><option value="3">3 · OK</option><option value="4">4</option><option value="5">5 · great</option></select></div>
+            <div id="lblVerdicts"></div>
+            <textarea id="lblNotes" class="input" rows="2" placeholder="Coach's notes: what you, or a coach, saw and felt on this lift" aria-label="Coach's notes"></textarea>
+            <div class="btns"><button class="btn" id="btnLabels">Save labels</button></div>
+            <p class="note" id="lblMsg" role="status"></p>
+          </div>
+          <div class="btns">
+            <button class="btn sm" id="btnDetVideo" hidden>Remove saved video</button>
+            <button class="btn sm" id="btnDetClose">Close</button>
+          </div>
+        </section>
+
+        <section id="compareSec" hidden>
+          <h2>Compare</h2>
+          <div id="cmpTable" class="scroll-x"></div>
+          <label class="check"><input type="checkbox" id="pullOnly"><span>Pull only (floor to the catch)</span></label>
+          <button class="btn" id="btnCompareExit">Back to the video</button>
+        </section>
+
+        <section>
+          <h2>Library</h2>
+          <div class="meter" aria-hidden="true"><div id="meter"></div></div>
+          <p class="note" id="libUsage">Saved lifts stay in this browser on this device. Nothing is uploaded.</p>
+          <p class="note ghost-note" id="ghostNote" hidden>Ghost on the video: <b id="ghostName"></b> <button class="btn sm" id="btnGhostOff">Remove</button></p>
+          <div class="seg" role="group" aria-label="Show lifts" id="libFilter">
+            <button data-lift="all" aria-pressed="true">All</button>
+            <button data-lift="snatch" aria-pressed="false">Snatch</button>
+            <button data-lift="clean" aria-pressed="false">Clean</button>
+            <button data-lift="cj" aria-pressed="false">C&amp;J</button>
+          </div>
+          <div id="libList"></div>
+          <div class="btns">
+            <button class="btn primary" id="btnCompare" disabled>Compare</button>
+          </div>
+          <p class="note" id="libMsg" role="status"></p>
+        </section>
+
+        <section>
+          <h2>Backup</h2>
+          <p class="note">Saved lifts live only in this browser. Export a backup file to keep them safe or move them to another device. Backups include stills but not videos.</p>
+          <div class="btns">
+            <button class="btn" id="btnExport">Export backup</button>
+            <label class="btn file" for="importFile">Import backup<input type="file" id="importFile" accept="application/json,.json"></label>
+          </div>
+          <h2>Dataset</h2>
+          <p class="note">Your labelled lifts as one file for analysis or training a model later: bar position, speed and joint angles frame by frame, with the phases, the app's findings and your labels (format: docs/dataset-format.md).</p>
+          <div class="btns"><button class="btn" id="btnDataset" disabled>Export labelled dataset</button></div>
+          <p class="note" id="dsMsg" role="status"></p>
+        </section>
+      </div>
+
+      <div id="panelCoach" role="tabpanel" aria-labelledby="tabCoach" hidden>
+        <section>
+          <h2>Coach</h2>
+          <p class="note" id="coachStatus">A language model running on this computer (LM Studio or Ollama) reads the analysis and suggests what to work on.</p>
+          <div class="row"><label for="coachUrl">Endpoint</label><input id="coachUrl" class="input" style="flex:1" spellcheck="false"></div>
+          <div class="row"><label for="coachModel">Model</label><select id="coachModel" class="btn" style="flex:1"></select></div>
+          <div class="btns">
+            <button class="btn" id="btnCoachConnect">Connect</button>
+            <button class="btn primary" id="btnCoach" disabled>Ask the coach</button>
+          </div>
+          <p class="note">Nothing leaves this computer. The coaching notes it uses (knowledge/coaching.md) are a draft that still needs review by a qualified coach, and the model can be wrong: treat it as a second opinion.</p>
+        </section>
+        <section id="coachOut" hidden><div id="coachAnswer"></div></section>
+        <section id="coachChat" hidden>
+          <h2>Ask more</h2>
+          <div id="coachThread"></div>
+          <textarea id="coachQ" class="input" rows="2" style="width:100%" placeholder="For example: why is the bar swinging out?"></textarea>
+          <div class="btns"><button class="btn" id="btnCoachSend">Ask</button></div>
+        </section>
+      </div>
+    </aside>
+  </main>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,15 @@
+# Local analysis engine. Installed by start.sh into engine/.venv (Python 3.12).
+torch>=2.5
+torchvision>=0.20
+numpy>=1.26
+opencv-python-headless>=4.10
+pillow>=10.4
+transformers>=4.46        # OWLv2 plate detector
+fastapi>=0.115
+uvicorn>=0.32
+python-multipart>=0.0.12
+rtmlib>=0.0.16            # RTMPose body tracking (the default)
+onnxruntime>=1.20         # runs RTMPose; its CoreML provider uses the Apple GPU / Neural Engine
+mediapipe>=0.10.20        # MediaPipe Pose, for BARPATH_POSE=mediapipe and comparisons
+# SAM 2.1 video tracker, built without CUDA extensions (SAM2_BUILD_CUDA=0 in start.sh)
+SAM-2 @ git+https://github.com/facebookresearch/sam2.git   # imported as sam2
